@@ -16,4 +16,5 @@ py .\server\app.py
 
 ## Phụ thuộc:
 
-Hiện chưa có phụ thuộc
+- Hiện chưa có phụ thuộc
+- Type check: python.analysis.typeCheckingMode

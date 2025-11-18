@@ -1,7 +1,7 @@
-from typing import TypeVar, Type, cast
+from typing import TypeVar, Type, cast, Tuple
 from xmlrpc.client import ServerProxy
-import inspect
-import hashlib
+
+import inspect, hashlib
 
 
 T = TypeVar("T")
@@ -10,10 +10,17 @@ T = TypeVar("T")
 class RPCStub:
     """Stub object gọi RPC với validation."""
 
-    def __init__(self, proxy: ServerProxy, interface_class: Type, class_hash: str):
+    def __init__(
+        self,
+        proxy: ServerProxy,
+        interface_class: Type,
+        class_hash: str,
+        service_name: str,
+    ):
         self._proxy = proxy
         self._interface_class = interface_class
         self._class_hash = class_hash
+        self._service_name = service_name
 
     def __getattr__(self, name: str):
         """Intercept method calls và forward tới RPC server."""
@@ -39,8 +46,9 @@ class RPCStub:
             except TypeError as e:
                 raise TypeError(f"Lỗi tham số khi gọi {name}: {e}")
 
-            # Gọi RPC với hash kèm theo
-            rpc_method = getattr(self._proxy, name)
+            # Gọi với format: serviceName_methodName
+            rpc_method_name = f"{self._service_name}_{name}"
+            rpc_method = getattr(self._proxy, rpc_method_name)
             return rpc_method(self._class_hash, *args, **kwargs)
 
         return rpc_call
@@ -91,18 +99,31 @@ def calculate_class_hash(interface_class: Type) -> str:
     return hasher.hexdigest()
 
 
-def stub(proxy: ServerProxy, interface_class: Type[T]) -> T:
+def lookup(proxy: ServerProxy, binding: Tuple[str, Type[T]]) -> T:
     """
-    Tạo type-safe stub từ interface class.
-    Trả về stub object có type hints từ interface class
+    Lookup remote object từ registry theo tên.
+
+    Args:
+        proxy: XML-RPC ServerProxy đã kết nối
+        binding: Tuple (service_name, interface_class)
+                 VD: ('calculator', CalculatorInterface)
+
+    Returns:
+        Stub object có type hints từ interface class
+
+    Example:
+        proxy = ServerProxy("http://localhost:8000/")
+        calc = lookup(proxy, ('calculator', CalculatorInterface))
+        result = calc.add(5, 3)
     """
+    service_name, interface_class = binding
 
     # Tính hash của interface class
     class_hash = calculate_class_hash(interface_class)
-    print(f"Interface [{interface_class.__name__}] hash:", class_hash)
+    print(f"Lookup interface [{interface_class.__name__}] hash:", class_hash)
 
     # Tạo stub
-    stub_obj = RPCStub(proxy, interface_class, class_hash)
+    stub_obj = RPCStub(proxy, interface_class, class_hash, service_name)
 
     # Cast về type interface
     return cast(T, stub_obj)

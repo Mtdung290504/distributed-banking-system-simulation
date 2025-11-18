@@ -1,11 +1,11 @@
 import xmlrpc.server
-from framework.server import skeleton
+import rmi_framework.server as RMIServer
+
 from interfaces.calculator_service import CalculatorInterface
+from interfaces.user_service import UserInterface
 
 
-class CalculatorService(CalculatorInterface):
-    """Implementation thuần túy - CHỈ business logic!"""
-
+class CalculatorImpl(CalculatorInterface):
     def add(self, a: float, b: float) -> float:
         return a + b
 
@@ -13,13 +13,22 @@ class CalculatorService(CalculatorInterface):
         return a * b
 
 
+class UserServiceImpl(UserInterface):
+    def get_user(self, user_id: int) -> str:
+        return f"User {user_id}"
+
+
 if __name__ == "__main__":
-    # Truyền class vào skeleton - framework tự tạo instance và wrap
-    calc_service = skeleton(CalculatorService, CalculatorInterface)
+    # Tạo registry
+    registry = RMIServer.Registry()
 
-    # Register vào XML-RPC server
-    server = xmlrpc.server.SimpleXMLRPCServer(("127.0.0.1", 8000))
-    server.register_instance(calc_service)
+    # Đăng ký services
+    registry.rebind("calculator", RMIServer.skeleton(CalculatorImpl, CalculatorInterface))
+    registry.rebind("user", RMIServer.skeleton(UserServiceImpl, UserInterface))
 
-    print("Server đang chạy tại http://127.0.0.1:8000")
-    server.serve_forever()
+    # Serve
+    RMIServer.listen(
+        xmlrpc.server.SimpleXMLRPCServer(("127.0.0.1", 8000)),
+        registry,
+        lambda: print("Server chạy tại http://127.0.0.1:8000"),
+    )

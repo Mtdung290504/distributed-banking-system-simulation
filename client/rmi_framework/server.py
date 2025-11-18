@@ -1,6 +1,8 @@
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Optional, Callable
 from functools import wraps
-from framework.client import calculate_class_hash
+from xmlrpc.server import SimpleXMLRPCServer
+
+from .client import calculate_class_hash
 
 T = TypeVar("T")
 
@@ -57,6 +59,84 @@ class RPCSkeleton:
         return wrapped
 
 
+class Registry:
+    """Registry quản lý nhiều RPC services."""
+
+    def __init__(self):
+        self._services = {}
+
+    def bind(self, name: str, skeleton: RPCSkeleton):
+        """
+        Bind một remote object vào registry với tên cho trước.
+
+        Args:
+            name: Tên để client lookup
+            skeleton: Skeleton object đã wrap
+
+        Raises:
+            ValueError: Nếu name đã tồn tại
+        """
+        if name in self._services:
+            raise ValueError(f"Service '{name}' đã được bind!")
+        self._services[name] = skeleton
+        print(f"✓ Bound service: {name}")
+
+    def rebind(self, name: str, skeleton: RPCSkeleton):
+        """
+        Bind hoặc replace một remote object.
+        """
+        if name in self._services:
+            print(f"⚠ Rebinding service: {name}")
+        else:
+            print(f"✓ Bound service: {name}")
+        self._services[name] = skeleton
+
+    def unbind(self, name: str):
+        """
+        Gỡ bỏ binding.
+        """
+        if name not in self._services:
+            raise ValueError(f"Service '{name}' không tồn tại!")
+        del self._services[name]
+        print(f"✓ Unbound service: {name}")
+
+    def list(self):
+        """
+        List tất cả tên services đã bind.
+        """
+        return list(self._services.keys())
+
+    def __getattr__(self, name: str):
+        """Route method calls đến đúng service.
+
+        Format: serviceName_methodName
+        VD: calculator_add, user_getById
+        """
+        # Tách service name và method name
+        if "_" not in name:
+            raise AttributeError(
+                f"Invalid method format: {name}. Expected: serviceName_methodName"
+            )
+
+        parts = name.split("_", 1)
+        service_name = parts[0]
+        method_name = parts[1]
+
+        # Tìm service
+        if service_name not in self._services:
+            raise AttributeError(f"Service '{service_name}' không tồn tại!")
+
+        service = self._services[service_name]
+
+        # Lấy method từ service
+        if not hasattr(service, method_name):
+            raise AttributeError(
+                f"Method '{method_name}' không tồn tại trong service '{service_name}'"
+            )
+
+        return getattr(service, method_name)
+
+
 def skeleton(service_class: Type[T], interface_class: Type[T]) -> RPCSkeleton:
     """
     Tạo RPC skeleton từ service implementation class.
@@ -66,11 +146,8 @@ def skeleton(service_class: Type[T], interface_class: Type[T]) -> RPCSkeleton:
         interface_class: Interface class để validate
 
     Returns:
-        RPCSkeleton đã wrap sẵn hash validation để register vào XML-RPC server
+        RPCSkeleton đã wrap sẵn hash validation để bind vào Registry
     """
-    # Import ở đây để tránh circular dependency
-    # from framework.client import calculate_class_hash
-
     # Validate service_class có extends interface_class không
     if not issubclass(service_class, interface_class):
         raise TypeError(
@@ -90,3 +167,15 @@ def skeleton(service_class: Type[T], interface_class: Type[T]) -> RPCSkeleton:
     skeleton_obj = RPCSkeleton(service_instance, interface_class, expected_hash)
 
     return skeleton_obj
+
+
+def listen(
+    rpc_server: SimpleXMLRPCServer,
+    registry: Registry,
+    before_serve: Optional[Callable[[], None]] = None,
+):
+    rpc_server.register_instance(registry)
+    if before_serve:
+        before_serve()
+
+    rpc_server.serve_forever()
