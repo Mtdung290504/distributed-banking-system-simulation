@@ -1,8 +1,9 @@
+# server.py
 from typing import Type, TypeVar, Optional, Callable
 from functools import wraps
 from xmlrpc.server import SimpleXMLRPCServer
 
-from .client import calculate_class_hash
+from . import utils as _utils, constants as _constants
 
 T = TypeVar("T")
 
@@ -77,18 +78,18 @@ class Registry:
             ValueError: Nếu name đã tồn tại
         """
         if name in self._services:
-            raise ValueError(f"Service '{name}' đã được bind!")
+            raise ValueError(f"Service [{name}] đã được bind")
         self._services[name] = skeleton
-        print(f"✓ Bound service: {name}")
+        print(f"Bound service: [{name}]")
 
     def rebind(self, name: str, skeleton: RPCSkeleton):
         """
         Bind hoặc replace một remote object.
         """
         if name in self._services:
-            print(f"⚠ Rebinding service: {name}")
+            print(f"Rebinding service: [{name}]")
         else:
-            print(f"✓ Bound service: {name}")
+            print(f"Bound service: [{name}]")
         self._services[name] = skeleton
 
     def unbind(self, name: str):
@@ -96,9 +97,9 @@ class Registry:
         Gỡ bỏ binding.
         """
         if name not in self._services:
-            raise ValueError(f"Service '{name}' không tồn tại!")
+            raise ValueError(f"Service [{name}] không tồn tại!")
         del self._services[name]
-        print(f"✓ Unbound service: {name}")
+        print(f"Unbound service: [{name}]")
 
     def list(self):
         """
@@ -112,26 +113,29 @@ class Registry:
         Format: serviceName_methodName
         VD: calculator_add, user_getById
         """
+        if not name.startswith("_") and _constants.SPLITOR in name:
+            print("[REMOTE]", name)
+
         # Tách service name và method name
-        if "_" not in name:
+        if _constants.SPLITOR not in name:
             raise AttributeError(
-                f"Invalid method format: {name}. Expected: serviceName_methodName"
+                f"Invalid method format: [{name}]. Expected: serviceName_methodName"
             )
 
-        parts = name.split("_", 1)
+        parts = name.split(_constants.SPLITOR, 1)
         service_name = parts[0]
         method_name = parts[1]
 
         # Tìm service
         if service_name not in self._services:
-            raise AttributeError(f"Service '{service_name}' không tồn tại!")
+            raise AttributeError(f"Service [{service_name}] không tồn tại!")
 
         service = self._services[service_name]
 
         # Lấy method từ service
         if not hasattr(service, method_name):
             raise AttributeError(
-                f"Method '{method_name}' không tồn tại trong service '{service_name}'"
+                f"Method [{method_name}] không tồn tại trong service [{service_name}]"
             )
 
         return getattr(service, method_name)
@@ -155,7 +159,7 @@ def skeleton(service_class: Type[T], interface_class: Type[T]) -> RPCSkeleton:
         )
 
     # Tính hash của interface
-    expected_hash = calculate_class_hash(interface_class)
+    expected_hash = _utils.get_class_hash(interface_class)
     print(
         f"Server skeleton interface [{interface_class.__name__}] hash: {expected_hash}"
     )
