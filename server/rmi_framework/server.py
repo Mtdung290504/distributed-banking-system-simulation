@@ -1,17 +1,22 @@
 # server.py
-from typing import Type, TypeVar, Optional, Callable
-from functools import wraps
-from xmlrpc.server import SimpleXMLRPCServer
+from typing import (
+    Type as _Type,
+    TypeVar as _TypeVar,
+    Optional as _Optional,
+    Callable as _Callable,
+)
+from functools import wraps as _wraps
+from xmlrpc.server import SimpleXMLRPCServer as _SimpleXMLRPCServer
 
 from . import utils as _utils, constants as _constants
 
-T = TypeVar("T")
+_T = _TypeVar("_T")
 
 
-class RPCSkeleton:
+class _RPCSkeleton:
     """Wrapper tự động thêm hash validation cho service implementation."""
 
-    def __init__(self, service_instance, interface_class: Type, expected_hash: str):
+    def __init__(self, service_instance, interface_class: _Type, expected_hash: str):
         self._service = service_instance
         self._interface_class = interface_class
         self._expected_hash = expected_hash
@@ -49,7 +54,7 @@ class RPCSkeleton:
     def _create_wrapped_method(self, method_name: str, original_method):
         """Tạo wrapped method có hash validation."""
 
-        @wraps(original_method)
+        @_wraps(original_method)
         def wrapped(client_hash: str, *args, **kwargs):
             # Validate hash trước
             self._validate_hash(client_hash, method_name)
@@ -66,7 +71,7 @@ class Registry:
     def __init__(self):
         self._services = {}
 
-    def bind(self, name: str, skeleton: RPCSkeleton):
+    def bind(self, name: str, skeleton: _RPCSkeleton):
         """
         Bind một remote object vào registry với tên cho trước.
 
@@ -82,7 +87,7 @@ class Registry:
         self._services[name] = skeleton
         print(f"Bound service: [{name}]")
 
-    def rebind(self, name: str, skeleton: RPCSkeleton):
+    def rebind(self, name: str, skeleton: _RPCSkeleton):
         """
         Bind hoặc replace một remote object.
         """
@@ -119,7 +124,7 @@ class Registry:
         # Tách service name và method name
         if _constants.SPLITOR not in name:
             raise AttributeError(
-                f"Invalid method format: [{name}]. Expected: serviceName_methodName"
+                f"Invalid method format: [{name}]. Expected: serviceName{_constants.SPLITOR}methodName"
             )
 
         parts = name.split(_constants.SPLITOR, 1)
@@ -141,16 +146,42 @@ class Registry:
         return getattr(service, method_name)
 
 
-def skeleton(service_class: Type[T], interface_class: Type[T]) -> RPCSkeleton:
+def skeleton(
+    service_class: _Type[_T], interface_class: _Type[_T]
+) -> _Callable[..., _RPCSkeleton]:
     """
-    Tạo RPC skeleton từ service implementation class.
+    Tạo skeleton factory từ service implementation class.
 
     Args:
         service_class: Class implement interface (PHẢI extends interface_class)
         interface_class: Interface class để validate
 
     Returns:
-        RPCSkeleton đã wrap sẵn hash validation để bind vào Registry
+        Factory function nhận các params của constructor và trả về RPCSkeleton
+
+    Example:
+        # Interface
+        class ICalculator(ABC):
+            @abstractmethod
+            def add(self, a: int, b: int) -> int: pass
+
+        # Implementation với constructor có params
+        class CalculatorImpl(ICalculator):
+            def __init__(self, precision: int, debug: bool):
+                self.precision = precision
+                self.debug = debug
+
+            def add(self, a: int, b: int) -> int:
+                return a + b
+
+        # Tạo skeleton factory
+        calc_skeleton_factory = skeleton(CalculatorImpl, ICalculator)
+
+        # Tạo skeleton instance với params
+        calc_skeleton = calc_skeleton_factory(precision=2, debug=True)
+
+        # Bind vào registry
+        registry.bind("calculator", calc_skeleton)
     """
     # Validate service_class có extends interface_class không
     if not issubclass(service_class, interface_class):
@@ -164,20 +195,41 @@ def skeleton(service_class: Type[T], interface_class: Type[T]) -> RPCSkeleton:
         f"Server skeleton interface [{interface_class.__name__}] hash: {expected_hash}"
     )
 
-    # Tạo service instance
-    service_instance = service_class()
+    # Trả về factory function
+    def _create_skeleton(*args, **kwargs) -> _RPCSkeleton:
+        """
+        Factory function tạo skeleton instance.
 
-    # Tạo skeleton với validation
-    skeleton_obj = RPCSkeleton(service_instance, interface_class, expected_hash)
+        Args:
+            *args, **kwargs: Các params truyền vào constructor của service class
 
-    return skeleton_obj
+        Returns:
+            RPCSkeleton đã wrap sẵn hash validation
+        """
+        # Tạo service instance với params
+        service_instance = service_class(*args, **kwargs)
+
+        # Tạo skeleton với validation
+        skeleton_obj = _RPCSkeleton(service_instance, interface_class, expected_hash)
+
+        return skeleton_obj
+
+    return _create_skeleton
 
 
 def listen(
-    rpc_server: SimpleXMLRPCServer,
+    rpc_server: _SimpleXMLRPCServer,
     registry: Registry,
-    before_serve: Optional[Callable[[], None]] = None,
+    before_serve: _Optional[_Callable[[], None]] = None,
 ):
+    """
+    Đăng ký registry vào XML-RPC server và bắt đầu lắng nghe.
+
+    Args:
+        rpc_server: SimpleXMLRPCServer instance
+        registry: Registry chứa các services đã bind
+        before_serve: Optional callback trước khi serve
+    """
     rpc_server.register_instance(registry)
     if before_serve:
         before_serve()

@@ -23,8 +23,10 @@ if __name__ == "__main__":
     registry = RMIServer.Registry()
 
     # Đăng ký services
-    registry.rebind("calculator", RMIServer.skeleton(CalculatorImpl, CalculatorInterface))
-    registry.rebind("user", RMIServer.skeleton(UserServiceImpl, UserInterface))
+    registry.rebind(
+        "calculator", RMIServer.skeleton(CalculatorImpl, CalculatorInterface)()
+    )
+    registry.rebind("user", RMIServer.skeleton(UserServiceImpl, UserInterface)())
 
     # Serve
     RMIServer.listen(

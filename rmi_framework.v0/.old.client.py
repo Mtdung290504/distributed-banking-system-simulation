@@ -76,7 +76,7 @@ def lookup(proxy: _ServerProxy, binding: _Tuple[str, _Type[_T]]) -> _T:
     service_name, interface_class = binding
 
     # Tính hash của interface class
-    class_hash = _utils.get_class_hash(interface_class)
+    class_hash = _utils.get_interface_hash(interface_class)
     print(f"Lookup interface [{interface_class.__name__}] hash:", class_hash)
 
     # Tạo stub

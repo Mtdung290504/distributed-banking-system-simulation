@@ -124,7 +124,7 @@ class Registry:
         # Tách service name và method name
         if _constants.SPLITOR not in name:
             raise AttributeError(
-                f"Invalid method format: [{name}]. Expected: serviceName_methodName"
+                f"Invalid method format: [{name}]. Expected: serviceName{_constants.SPLITOR}methodName"
             )
 
         parts = name.split(_constants.SPLITOR, 1)
@@ -190,7 +190,7 @@ def skeleton(
         )
 
     # Tính hash của interface
-    expected_hash = _utils.get_class_hash(interface_class)
+    expected_hash = _utils.get_interface_hash(interface_class)
     print(
         f"Server skeleton interface [{interface_class.__name__}] hash: {expected_hash}"
     )

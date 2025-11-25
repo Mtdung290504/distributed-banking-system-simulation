@@ -6,7 +6,7 @@ from xmlrpc.client import ServerProxy as _ServerProxy
 from . import utils as _utils, constants as _constants
 
 
-T = _TypeVar("T")
+_T = _TypeVar("_T")
 
 
 class _RPCStub:
@@ -56,7 +56,7 @@ class _RPCStub:
         return rpc_call
 
 
-def lookup(proxy: _ServerProxy, binding: _Tuple[str, _Type[T]]) -> T:
+def lookup(proxy: _ServerProxy, binding: _Tuple[str, _Type[_T]]) -> _T:
     """
     Lookup remote object từ registry theo tên.
 
@@ -83,4 +83,4 @@ def lookup(proxy: _ServerProxy, binding: _Tuple[str, _Type[T]]) -> T:
     stub_obj = _RPCStub(proxy, interface_class, class_hash, service_name)
 
     # Cast về type interface
-    return _cast(T, stub_obj)
+    return _cast(_T, stub_obj)
