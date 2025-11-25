@@ -1,5 +1,5 @@
 # Server side
-from net.registry import local_registry
+from core.registry import LocateRegistry
 from examples.services.auth_service import AuthServiceImpl
 
 auth_service_db = {
@@ -7,10 +7,11 @@ auth_service_db = {
     "bob": "securepass",
 }
 
+registry = LocateRegistry.createRegistry(29054)
 auth_service = AuthServiceImpl(auth_service_db)
 
 # Bind services
-local_registry.bind("auth", auth_service)
+registry.bind("auth", auth_service)
 
 # Start blocking server
-local_registry.listen()
+registry.listen()

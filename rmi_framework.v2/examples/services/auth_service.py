@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from net.remote import RemoteObject, Remote
+from core.remote import RemoteObject, Remote
 from examples.services.user_callback import UserCallback
 
 

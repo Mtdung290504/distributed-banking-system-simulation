@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from net.remote import RemoteObject, Remote
+from core.remote import RemoteObject, Remote
 
 
 # Define interface
