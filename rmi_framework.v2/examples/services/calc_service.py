@@ -1,11 +1,13 @@
 from abc import abstractmethod
 from core.remote import RemoteObject, Remote
 
+from examples.services.auth_service import AuthServiceImpl
+
 
 # Define interface
 class CalcService(Remote):
     @abstractmethod
-    def add(self, a: float, b: float) -> float:
+    def add(self, session_id: str, a: float, b: float) -> float:
         pass
 
     @abstractmethod
@@ -23,10 +25,17 @@ class CalcService(Remote):
 
 # Implementation
 class CalcServiceImpl(RemoteObject, CalcService):
-    def __init__(self):
+    def __init__(self, req: AuthServiceImpl):
         super().__init__()
+        self.req = req
 
-    def add(self, a: float, b: float) -> float:
+    def add(self, session_id: str, a: float, b: float) -> float:
+        history = self.req.sessions[session_id]["history"]
+        history.append({"method": "add", "params": (a, b)})
+
+        if len(history % 3 == 0):
+            print(history)
+
         return a + b
 
     def sub(self, a: float, b: float) -> float:

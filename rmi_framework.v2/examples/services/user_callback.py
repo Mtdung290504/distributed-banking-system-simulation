@@ -13,7 +13,9 @@ class UserCallback(Remote):
 class UserCallbackImpl(RemoteObject, UserCallback):
     def __init__(self):
         super().__init__()
+        self.session_id = None
 
     def set_session_id(self, session_id: str) -> bool:
         print(f"Session ID set to: {session_id}")
+        self.session_id = session_id
         return True

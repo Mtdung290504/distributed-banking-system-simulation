@@ -1,6 +1,9 @@
 from abc import abstractmethod
+
 from core.remote import RemoteObject, Remote
 from examples.services.user_callback import UserCallback
+
+import uuid
 
 
 # Define interface
@@ -15,6 +18,7 @@ class AuthServiceImpl(RemoteObject, AuthService):
     def __init__(self, db: dict[str, str]):
         super().__init__()
         self.db = db
+        self.sessions = dict()
 
     def login(self, username: str, password: str, callback: UserCallback) -> bool:
         print(f"User [{username}] is trying to log in...")
@@ -24,9 +28,9 @@ class AuthServiceImpl(RemoteObject, AuthService):
             return False
 
         # Giả sử đăng nhập luôn thành công
-        session_id = "SESSION12345"
-        print(
-            f"User [{username}] logged in successfully. Setting session ID via callback..."
-        )
+        session_id = str(uuid.uuid4())
+        self.sessions[session_id] = dict()
+        self.sessions[session_id]["history"] = list()
         callback.set_session_id(session_id)
+
         return True
