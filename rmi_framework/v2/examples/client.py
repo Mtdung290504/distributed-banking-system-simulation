@@ -1,5 +1,4 @@
-# Client Code
-import traceback
+# Client side
 from core.registry import LocateRegistry
 from examples.services.auth_service import AuthService
 from examples.services.calc_service import CalcService
