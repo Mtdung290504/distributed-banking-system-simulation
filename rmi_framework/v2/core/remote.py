@@ -11,7 +11,7 @@ from abc import ABC
 from inspect import isabstract
 from typing import TYPE_CHECKING, Optional
 
-from helpers.utils import get_interface_hash
+from ..helpers.utils import get_interface_hash
 
 if TYPE_CHECKING:
     from helpers.types import RemoteReference

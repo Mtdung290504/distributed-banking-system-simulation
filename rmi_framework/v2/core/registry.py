@@ -16,11 +16,11 @@ from typing import TypeVar, Type, cast, get_type_hints, Optional
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.client import ServerProxy
 
-from helpers.constants import METHOD_SPLITOR, SERVICE_NAME_SPLITOR, DEFAULT_RMI_PORT
-from helpers.types import valid_inet4_address, RemoteReference
-from helpers.utils import get_interface_hash
+from ..helpers.constants import METHOD_SPLITOR, SERVICE_NAME_SPLITOR, DEFAULT_RMI_PORT
+from ..helpers.types import valid_inet4_address, RemoteReference
+from ..helpers.utils import get_interface_hash
 
-from core.remote import RemoteObject, Remote
+from .remote import RemoteObject, Remote
 
 T = TypeVar("T")
 
