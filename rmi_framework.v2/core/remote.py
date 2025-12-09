@@ -1,5 +1,6 @@
 from abc import ABC
 from inspect import isabstract
+import threading
 
 from helpers.utils import get_interface_hash
 from helpers.types import RemoteReference
@@ -18,15 +19,17 @@ class RemoteObject:
     """
 
     __object_id = 0
+    __id_lock = threading.Lock()
 
     @staticmethod
     def __next_object_ID():
-        RemoteObject.__object_id += 1
-        return RemoteObject.__object_id
+        with RemoteObject.__id_lock:
+            RemoteObject.__object_id += 1
+            return RemoteObject.__object_id
 
     def __init__(self):
         self.object_id = RemoteObject.__next_object_ID()
-        self.signature_hash = str("")  # Hash của interface
+        self.signature_hash = ""  # Hash của interface
 
         # Tìm abstract interface class kế thừa Remote
         for cls in self.__class__.__mro__:
