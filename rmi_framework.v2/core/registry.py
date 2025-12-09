@@ -14,11 +14,6 @@ from core.remote import RemoteObject, Remote
 
 T = TypeVar("T")
 
-# Quá nhiều rủi ro, để sau... hoặc không bao giờ
-# from socketserver import ThreadingMixIn
-# class ThreadedXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
-#     pass
-
 
 def get_local_inet_address() -> str:
     """Fallback local IP getter (simple, uses UDP trick)."""
@@ -368,7 +363,7 @@ class RPCStub:
                 bound = sig.bind(None, *args, **kwargs)
                 bound.apply_defaults()
             except TypeError as e:
-                raise TypeError(f"Lỗi tham số khi gọi [{name}]: {e}")
+                raise TypeError(f"Lỗi tham số khi gọi method [{name}]: {e}")
 
             # Serialize arguments (xử lý RemoteObject thành remote reference)
             serialized_args = self._serialize_arguments(args)

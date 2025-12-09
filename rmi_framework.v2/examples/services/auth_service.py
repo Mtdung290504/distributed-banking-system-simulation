@@ -27,7 +27,7 @@ class AuthServiceImpl(RemoteObject, AuthService):
             print(f"Login failed for user [{username}].")
             return False
 
-        # Giả sử đăng nhập luôn thành công
+        # Đăng nhập luôn thành công
         session_id = str(uuid.uuid4())
         self.sessions[session_id] = dict()
         self.sessions[session_id]["history"] = list()

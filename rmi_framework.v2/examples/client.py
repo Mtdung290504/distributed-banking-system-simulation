@@ -1,4 +1,5 @@
 # Client Code
+import traceback
 from core.registry import LocateRegistry
 from examples.services.auth_service import AuthService
 from examples.services.calc_service import CalcService
@@ -15,10 +16,30 @@ calc_service = registry.lookup("calc", CalcService)
 
 user_callback = UserCallbackImpl()
 
-# Lúc này _serialize_arguments sẽ tự động dựng local server lên ở background
-while not auth_service.login(input("username:"), input("password:"), user_callback):
-    print("Login failed!")
-    continue
+logged_in = False
+try:
+    while not logged_in:
+        try:
+            username, password = input("username:"), input("password:")
+        # Bắt Ctrl+C + Enter để ngắt
+        except:
+            exit()
+
+        try:
+            logged_in = auth_service.login(username, password, user_callback)
+
+        except Exception as e:
+            # Bắt Remote Error
+            print("\n*Remote error:", e, "\n")
+            logged_in = False
+
+        # Chỉ chạy nếu logged_in == False và không có ngoại lệ
+        if not logged_in:
+            print("Login failed!")
+            continue
+
+except KeyboardInterrupt:
+    pass
 
 print(user_callback.session_id)
 assert (

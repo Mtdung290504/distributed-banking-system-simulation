@@ -33,7 +33,7 @@ class CalcServiceImpl(RemoteObject, CalcService):
         history = self.req.sessions[session_id]["history"]
         history.append({"method": "add", "params": (a, b)})
 
-        if len(history % 3 == 0):
+        if len(history) % 3 == 0:
             print(history)
 
         return a + b
