@@ -115,7 +115,7 @@ class ServiceWrapper:
                     f"Interface mismatch giữa client và server!\n"
                     f"Server interface hash: {self._expected_hash}\n"
                     f"Client interface hash: {client_hash}\n"
-                    f"Vui lòng đảm bảo cả 2 peer dùng cùng phiên bản interface."
+                    f"Cần đảm bảo cả 2 peer dùng cùng phiên bản interface."
                 )
 
             # Deserialize arguments (remote refs -> stubs)
@@ -240,7 +240,7 @@ class LocalRegistry:
             raise AssertionError(
                 f"Remote object không hợp lệ!\n"
                 f"Class [{remote_object.__class__.__name__}] phải kế thừa "
-                f"cả RemoteObject và Remote interface."
+                f"RemoteObject và gián tiếp kế thừa Remote interface."
             )
 
         # Validate có signature hash
@@ -273,7 +273,7 @@ class LocalRegistry:
 
             # Wrap service với validation layer
             self._services[name] = ServiceWrapper(remote_object)
-            print(f"[Registry {self.host}:{self.port}] Bound service: [{name}]")
+            print(f"[Registry-{self.host}:{self.port}] Bound service: [{name}]")
 
     def rebind(self, name: str, remote_object: RemoteObject):
         """
@@ -297,10 +297,10 @@ class LocalRegistry:
 
         with self._lock:
             if name in self._services:
-                print(f"[Registry {self.host}:{self.port}] Rebinding service: [{name}]")
+                print(f"[Registry-{self.host}:{self.port}] Rebinding service: [{name}]")
             else:
                 print(
-                    f"[Registry {self.host}:{self.port}] Binding new service: [{name}]"
+                    f"[Registry-{self.host}:{self.port}] Binding new service: [{name}]"
                 )
 
             self._services[name] = ServiceWrapper(remote_object)
@@ -326,7 +326,7 @@ class LocalRegistry:
                 raise ValueError(f"Service [{name}] không tồn tại trong registry!")
 
             del self._services[name]
-            print(f"[Registry {self.host}:{self.port}] Unbound service: [{name}]")
+            print(f"[Registry-{self.host}:{self.port}] Unbound service: [{name}]")
 
     def list(self):
         """
@@ -437,7 +437,7 @@ class LocalRegistry:
             if isinstance(result, RemoteObject):
                 service_instance = result
 
-                # Format: ClassName@ObjectID
+                # Format: ClassName#ObjectID
                 service_name_ref = (
                     f"{service_instance.__class__.__name__}"
                     f"{SERVICE_NAME_SPLITOR}"
@@ -646,7 +646,7 @@ class RPCStub:
 
         return remote_call
 
-    def _serialize_arguments(self, args):
+    def _serialize_arguments(self, args: tuple):
         """
         Serialize arguments, chuyển RemoteObject thành remote reference.
 
@@ -675,14 +675,15 @@ class RPCStub:
                         f"Không thể pass RemoteObject [{arg.__class__.__name__}] "
                         f"làm argument vì Local Registry chưa được start!\n\n"
                         f"Giải pháp:\n"
-                        f"1. Tạo registry: reg = LocateRegistry.createRegistry()\n"
-                        f"2. Start registry: reg.listen(background=True)\n"
-                        f"3. Sau đó mới gọi remote method với RemoteObject\n\n"
-                        f"Lưu ý: RemoteObject sẽ tự động export vào registry, "
-                        f"dev có thể dùng obj.exported_name để unbind sau."
+                        f"#1. Tạo registry:\n"
+                        f"local_registry = LocateRegistry.createRegistry()\n"
+                        f"#2. Start registry:\n"
+                        f"local_registry.listen(background=True)\n\n"
+                        f"Sau đó mới gọi được remote method với RemoteObject\n"
+                        f"\tLưu ý: Có thể dùng obj.exported_name để dùng trong unbind."
                     )
 
-                # Format: ClassName@ObjectID
+                # Format: ClassName#ObjectID
                 service_name = (
                     f"{arg.__class__.__name__}"
                     f"{SERVICE_NAME_SPLITOR}"
