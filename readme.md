@@ -1,20 +1,21 @@
 ## Mô tả:
 
-Demo đơn giản giao thức RPC dịch vụ tính cộng và nhân
-
 ## Chạy code:
 
 ```bash
 # Chạy client:
-py .\client\app.py
+py -m app_client.main
 ```
 
 ```bash
 # Chạy server:
-py .\server\app.py
+py -m app_server.main
 ```
 
 ## Phụ thuộc:
 
-- Hiện chưa có phụ thuộc
+- mysql-connector-python
+
+## Notes:
+
 - Type check: python.analysis.typeCheckingMode
