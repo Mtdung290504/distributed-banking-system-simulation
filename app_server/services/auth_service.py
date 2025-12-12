@@ -25,10 +25,19 @@ class AuthServiceImpl(RemoteObject, AuthService):
 
         try:
             user_data = self.database.reader().login(card_number, pin)
-            session_id = str(uuid.uuid4())
 
-            user_service = UserServiceImpl(self.registry, session_id, user_data)
-            self.registry.bind(session_id, user_service)
+            while True:
+                session_id = str(uuid.uuid4())
+                user_service = UserServiceImpl(self.registry, session_id, user_data)
+
+                # Đảm bảo session_id là duy nhất, chạy đến khi nào uuid không trùng thì thôi
+                # Nhưng xác suất trùng thấp hơn trúng số nữa
+                try:
+                    self.registry.bind(session_id, user_service)
+                    break
+                except ValueError:
+                    print("Bingo!!! May mắn không ai bằng!!!")
+                    continue
 
             callback.notify(success_message)
             return LoginResult(

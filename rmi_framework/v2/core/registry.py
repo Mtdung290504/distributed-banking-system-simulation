@@ -288,11 +288,6 @@ class LocalRegistry:
             RuntimeError: Nếu server đang chạy
             AssertionError: Nếu remote object không hợp lệ
         """
-        if self._is_running:
-            raise RuntimeError(
-                "Không thể rebind service khi server đang chạy. "
-                "Dừng server trước hoặc dùng bind() trước khi start."
-            )
 
         self._assert_valid_remote_object(remote_object)
 
@@ -318,10 +313,6 @@ class LocalRegistry:
             RuntimeError: Nếu server đang chạy
             ValueError: Nếu service không tồn tại
         """
-        # if self._is_running:
-        #     raise RuntimeError(
-        #         "Không thể unbind service khi server đang chạy. " "Dừng server trước."
-        #     )
 
         with self._lock:
             if name not in self._services:
