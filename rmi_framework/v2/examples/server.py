@@ -1,7 +1,7 @@
 # Server side
 from core.registry import LocateRegistry
-from examples.services.auth_service import AuthServiceImpl
-from examples.services.calc_service import CalcServiceImpl
+from .services.auth_service import AuthServiceImpl
+from .services.calc_service import CalcServiceImpl
 
 # Create service instances
 auth_service = AuthServiceImpl(

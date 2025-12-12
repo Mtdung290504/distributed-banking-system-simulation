@@ -8,3 +8,9 @@ class PingCallback(Remote):
     @abstractmethod
     def ping(self, timestamp: int) -> int:
         pass
+
+
+class SuccessCallback(Remote):
+    @abstractmethod
+    def notify(self, message: str):
+        pass

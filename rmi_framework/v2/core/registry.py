@@ -62,7 +62,7 @@ class ServiceWrapper:
         Args:
             service: Remote object cần wrap
         """
-        self._service = service
+        self.service = service
         self._expected_hash = service.signature_hash
 
     def __getattr__(self, name: str):
@@ -79,19 +79,19 @@ class ServiceWrapper:
             AttributeError: Nếu method không tồn tại hoặc không callable
         """
         # Check method có tồn tại không
-        if not hasattr(self._service, name):
+        if not hasattr(self.service, name):
             raise AttributeError(
                 f"Method [{name}] không tồn tại trong service "
-                f"[{self._service.__class__.__name__}]"
+                f"[{self.service.__class__.__name__}]"
             )
 
-        method = getattr(self._service, name)
+        method = getattr(self.service, name)
 
         # Check method có callable không
         if not callable(method):
             raise AttributeError(
                 f"Attribute [{name}] trong service "
-                f"[{self._service.__class__.__name__}] không phải method"
+                f"[{self.service.__class__.__name__}] không phải method"
             )
 
         def validated_call(client_hash: str, *args, **kwargs):
@@ -214,7 +214,7 @@ class LocalRegistry:
         self.host = host or get_local_inet_address()
         self.port = port or DEFAULT_RMI_PORT
 
-        self._services = {}  # service_name -> ServiceWrapper
+        self._services: dict[str, ServiceWrapper] = {}
         self._lock = threading.RLock()
 
         self._server: Optional[SimpleXMLRPCServer] = None
@@ -273,6 +273,7 @@ class LocalRegistry:
 
             # Wrap service với validation layer
             self._services[name] = ServiceWrapper(remote_object)
+            remote_object.exported_name = name
             print(f"[Registry-{self.host}:{self.port}] Bound service: [{name}]")
 
     def rebind(self, name: str, remote_object: RemoteObject):
@@ -304,6 +305,7 @@ class LocalRegistry:
                 )
 
             self._services[name] = ServiceWrapper(remote_object)
+            remote_object.exported_name = name
 
     def unbind(self, name: str):
         """
@@ -316,16 +318,18 @@ class LocalRegistry:
             RuntimeError: Nếu server đang chạy
             ValueError: Nếu service không tồn tại
         """
-        if self._is_running:
-            raise RuntimeError(
-                "Không thể unbind service khi server đang chạy. " "Dừng server trước."
-            )
+        # if self._is_running:
+        #     raise RuntimeError(
+        #         "Không thể unbind service khi server đang chạy. " "Dừng server trước."
+        #     )
 
         with self._lock:
             if name not in self._services:
                 raise ValueError(f"Service [{name}] không tồn tại trong registry!")
 
+            self._services[name].service.exported_name = None
             del self._services[name]
+
             print(f"[Registry-{self.host}:{self.port}] Unbound service: [{name}]")
 
     def list(self):

@@ -1,6 +1,5 @@
 import mysql.connector
 from mysql.connector.connection import MySQLConnection
-from mysql.connector.cursor import MySQLCursor
 
 from threading import Lock
 
@@ -34,8 +33,10 @@ class Database:
                     user=self.user,
                     password=self.password,
                     database=self.database,
+                    use_pure=True,
                 ),
             )
+            print("Kết nối database thành công!")
 
     def get_connection(self):
         """Lấy connection, tự động reconnect nếu cần"""
@@ -181,36 +182,31 @@ class DatabaseReader:
 class DatabaseWriter:
     """Xử lý các thao tác WRITE vào database"""
 
-    def __init__(self, database: Database) -> None:
-        self.database: Database = database
-        self._lock: Lock = Lock()
+    def __init__(self, database: Database):
+        self.database = database
+        self._lock = Lock()
 
-    def register_user(self, name: str, dob: str, phone: str, citizen_id: str) -> None:
+    def register_user(self, name: str, dob: str, phone: str, citizen_id: str):
         with self._lock:
-            # SỬA 4: Type hint trong Writer
-            cursor: MySQLCursor = self.database.get_connection().cursor()
+            cursor = self.database.get_connection().cursor()
             try:
                 cursor.callproc("register_user", [name, dob, phone, citizen_id])
                 self.database.get_connection().commit()
             finally:
                 cursor.close()
 
-    def register_card(
-        self, card_number: str, pin: str, balance: int, user_id: int
-    ) -> None:
+    def register_card(self, card_number: str, pin: str, balance: int, user_id: int):
         with self._lock:
-            cursor: MySQLCursor = self.database.get_connection().cursor()
+            cursor = self.database.get_connection().cursor()
             try:
                 cursor.callproc("register_card", [card_number, pin, balance, user_id])
                 self.database.get_connection().commit()
             finally:
                 cursor.close()
 
-    def withdraw_money(
-        self, card_number: str, amount: int, transaction_time: int
-    ) -> None:
+    def withdraw_money(self, card_number: str, amount: int, transaction_time: int):
         with self._lock:
-            cursor: MySQLCursor = self.database.get_connection().cursor()
+            cursor = self.database.get_connection().cursor()
             try:
                 cursor.callproc(
                     "withdraw_money", [card_number, amount, transaction_time]
@@ -225,9 +221,9 @@ class DatabaseWriter:
         to_card_number: str,
         amount: int,
         transaction_time: int,
-    ) -> None:
+    ):
         with self._lock:
-            cursor: MySQLCursor = self.database.get_connection().cursor()
+            cursor = self.database.get_connection().cursor()
             try:
                 cursor.callproc(
                     "transfer_money",
@@ -237,11 +233,9 @@ class DatabaseWriter:
             finally:
                 cursor.close()
 
-    def deposit_money(
-        self, card_number: str, amount: int, transaction_time: int
-    ) -> None:
+    def deposit_money(self, card_number: str, amount: int, transaction_time: int):
         with self._lock:
-            cursor: MySQLCursor = self.database.get_connection().cursor()
+            cursor = self.database.get_connection().cursor()
             try:
                 cursor.callproc(
                     "deposit_money", [card_number, amount, transaction_time]
@@ -250,9 +244,9 @@ class DatabaseWriter:
             finally:
                 cursor.close()
 
-    def change_pin(self, card_number: str, new_pin: str) -> None:
+    def change_pin(self, card_number: str, new_pin: str):
         with self._lock:
-            cursor: MySQLCursor = self.database.get_connection().cursor()
+            cursor = self.database.get_connection().cursor()
             try:
                 cursor.callproc("change_pin", [card_number, new_pin])
                 self.database.get_connection().commit()
