@@ -15,7 +15,7 @@ class Database:
         self.host = db_url
         self.user = db_user
         self.password = db_password
-        self.database = db_name
+        self.db_name = db_name
         self._lock = Lock()
 
         self._writer: Optional["DatabaseWriter"] = None
@@ -32,7 +32,7 @@ class Database:
                     host=self.host,
                     user=self.user,
                     password=self.password,
-                    database=self.database,
+                    database=self.db_name,
                     use_pure=True,
                 ),
             )

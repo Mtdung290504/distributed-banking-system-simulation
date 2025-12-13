@@ -1,7 +1,7 @@
 from rmi_framework.v2 import RemoteObject
 from shared.interfaces.client import PingCallback, SuccessCallback
 
-from shared.utils import current_ms_timestamp
+from shared.utils import now
 
 
 class PingCallbackImpl(RemoteObject, PingCallback):
@@ -9,7 +9,7 @@ class PingCallbackImpl(RemoteObject, PingCallback):
         super().__init__()
 
     def ping(self, timestamp: int) -> int:
-        return current_ms_timestamp() - timestamp
+        return now() - timestamp
 
 
 class SuccessCallbackImpl(RemoteObject, SuccessCallback):
