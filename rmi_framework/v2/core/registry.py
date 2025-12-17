@@ -686,11 +686,12 @@ class RPCStub:
                 )
 
                 # AUTO-EXPORT: Tự động bind nếu chưa có
-                if service_name not in reg.list():
-                    reg.bind(service_name, arg)
-                    # Lưu exported_name để dev có thể tự unbind
-                    arg.exported_name = service_name
-                    print(f"[Auto-Export] Bound [{service_name}] to registry")
+                with reg._lock: # Fix thread-safety
+                    if service_name not in reg.list():
+                        reg.bind(service_name, arg)
+                        # Lưu exported_name để dev có thể tự unbind
+                        arg.exported_name = service_name
+                        print(f"[Auto-Export] Bound [{service_name}] to registry")
 
                 # Serialize thành remote reference
                 serialized.append(arg.serialize(service_name, reg.host, reg.port))
