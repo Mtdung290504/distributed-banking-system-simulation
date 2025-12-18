@@ -6,10 +6,10 @@ from .services.user_callback import UserCallbackImpl
 
 from xmlrpc.client import Fault
 
-local_registry = LocateRegistry.createRegistry()
+local_registry = LocateRegistry.local_registry()
 local_registry.listen(background=True)
 
-registry = LocateRegistry.getRegistry(address=None, port=29054)
+registry = LocateRegistry.get_registry(address=None, port=29054)
 auth_service = registry.lookup("auth", AuthService)
 calc_service = registry.lookup("calc", CalcService)
 

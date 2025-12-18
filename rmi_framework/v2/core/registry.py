@@ -457,22 +457,27 @@ class LocateRegistry:
     _current_local_registry: Optional[LocalRegistry] = None
 
     @staticmethod
-    def createRegistry(port: Optional[int] = None) -> LocalRegistry:
+    def local_registry(port: Optional[int] = None) -> LocalRegistry:
         """
         Tạo local registry mới.
+        *Lưu ý chỉ lần gọi đầu tiên là khởi tạo, những lần gọi sau là lấy lại registry đã cache
 
         Args:
             port: Port number (None = DEFAULT_RMI_PORT)
 
         Returns:
-            LocalRegistry: Registry mới tạo (chưa start)
+            LocalRegistry: Local registry mới tạo (chưa start) nếu là lần đầu, từ những lần sau là cache
         """
-        reg = LocalRegistry(port=port)
-        LocateRegistry._current_local_registry = reg
-        return reg
+        if LocateRegistry._current_local_registry is None:
+            reg = LocalRegistry(port=port)
+            LocateRegistry._current_local_registry = reg
+        else:
+            print('Reuse registry')
+
+        return LocateRegistry._current_local_registry
 
     @staticmethod
-    def getRegistry(address: Optional[str] = None, port: Optional[int] = None):
+    def get_registry(address: Optional[str] = None, port: Optional[int] = None):
         """
         Lấy remote registry (client-side proxy).
 
@@ -495,7 +500,7 @@ class LocateRegistry:
         return RemoteRegistry(proxy)
 
     @staticmethod
-    def getLocalRegistry() -> Optional[LocalRegistry]:
+    def get_local_registry() -> Optional[LocalRegistry]:
         """
         Lấy local registry hiện tại (nếu có).
 
@@ -662,7 +667,7 @@ class RPCStub:
         for arg in args:
             if isinstance(arg, RemoteObject):
                 # Lấy local registry
-                reg = LocateRegistry.getLocalRegistry()
+                reg = LocateRegistry.get_local_registry()
 
                 # Check registry đã start chưa
                 if reg is None or not reg._is_running:
@@ -686,8 +691,8 @@ class RPCStub:
                 )
 
                 # AUTO-EXPORT: Tự động bind nếu chưa có
-                with reg._lock: # Fix thread-safety
-                    if service_name not in reg.list():
+                with reg._lock:  # Fix thread-safety
+                    if service_name not in reg._services:
                         reg.bind(service_name, arg)
                         # Lưu exported_name để dev có thể tự unbind
                         arg.exported_name = service_name

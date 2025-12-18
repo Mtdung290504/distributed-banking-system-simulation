@@ -9,7 +9,7 @@ auth_service = AuthServiceImpl(
 )
 calc_service = CalcServiceImpl(auth_service)
 
-local_registry = LocateRegistry.createRegistry(29054)
+local_registry = LocateRegistry.local_registry(29054)
 
 # Bind services
 local_registry.bind("auth", auth_service)

@@ -7,10 +7,10 @@ from shared.interfaces import server
 from .callbacks import SuccessCallbackImpl
 
 
-local_registry = LocateRegistry.createRegistry()
+local_registry = LocateRegistry.local_registry()
 local_registry.listen(background=True)
 
-registry = LocateRegistry.getRegistry(address=None, port=29054)
+registry = LocateRegistry.get_registry(address=None, port=29054)
 auth_service = registry.lookup("auth", server.AuthService)
 
 # ping_callback = PingCallbackImpl()

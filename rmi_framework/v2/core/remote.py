@@ -11,6 +11,7 @@ from abc import ABC
 from inspect import isabstract
 from typing import TYPE_CHECKING, Optional
 
+from ..helpers.constants import METHOD_SPLITOR
 from ..helpers.utils import get_interface_hash
 
 if TYPE_CHECKING:
@@ -45,7 +46,7 @@ class RemoteObject:
 
         class MyService(RemoteObject, MyInterface):
             def __init__(self):
-                super().__init__()  # Bắt buộc phải gọi!
+                super().__init__()  # Bắt buộc phải gọi
 
             def do_something(self):
                 return "Hello"
@@ -71,6 +72,7 @@ class RemoteObject:
         Returns:
             int: Unique object ID
         """
+
         with RemoteObject.__id_lock:
             RemoteObject.__object_id += 1
             return RemoteObject.__object_id
@@ -86,6 +88,7 @@ class RemoteObject:
         Raises:
             ValueError: Nếu class không implement interface Remote hợp lệ
         """
+
         # Generate unique ID
         self.object_id = RemoteObject.__next_object_ID()
 
@@ -115,6 +118,7 @@ class RemoteObject:
         Returns:
             str: Interface hash hoặc empty string nếu không tìm thấy
         """
+
         for cls in self.__class__.__mro__:
             # Bỏ qua RemoteObject và object
             if cls is RemoteObject or cls is object:
@@ -141,6 +145,7 @@ class RemoteObject:
         Raises:
             RuntimeError: Nếu __init__ chưa được gọi
         """
+
         # Check xem attribute __initialized có tồn tại không
         # Dùng getattr với default False để tránh AttributeError
         if not getattr(self, "_RemoteObject__initialized", False):
@@ -168,14 +173,14 @@ class RemoteObject:
             RuntimeError: Nếu RemoteObject chưa được khởi tạo đúng
             AssertionError: Nếu service_name chứa ký tự không hợp lệ
         """
+
         # Validate object đã được khởi tạo
         self._commit()
 
         # Validate service_name không chứa ký tự đặc biệt
-        # (Defensive programming - tránh conflict với SPLITOR)
         assert (
-            "@" not in service_name
-        ), f"Service name [{service_name}] không được chứa ký tự '@'"
+            METHOD_SPLITOR not in service_name
+        ), f"Service name [{service_name}] không được chứa ký tự '{METHOD_SPLITOR}'"
 
         # Tạo remote reference
         return {
