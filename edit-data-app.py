@@ -1,14 +1,13 @@
 # File này hỗ trợ tạo user/thẻ và thử nghiệm
 # Không liên quan đến chương trình chính
 
-from mysql.connector import Error as SQLException
+from app_server.database.exceptions import SQLException
 
 from app_server.database.main import Database
 from shared.utils import now, dmy_from_date, dmy_hms_from_timestamp
 
 databases = [
-    Database("127.0.0.1", "root", "123456", f"atm_db_{s_name}")
-    for s_name in ["s1", "s2"]
+    Database("127.0.0.1", "root", "123456", f"atm_db_{s_name}") for s_name in ["s1"]
 ]
 print("Kết nối đến server thành công!")
 print("Nhập lệnh (lệnh, tham_số_1, tham_số_2,...). Nhập 'exit' để thoát.")
@@ -155,12 +154,8 @@ while True:
         print(f"Lỗi định dạng số: {e}")
 
     except SQLException as e:
-        if e.sqlstate == "45000" and e.msg:
-            custom_message = e.msg
-            print(custom_message)
-        else:
-            # Lỗi SQL hệ thống khác (ví dụ: mất kết nối, lỗi cú pháp...)
-            print(f"Lỗi hệ thống trong DB: {e.msg} (Code: {e.errno})")
+        print(e.message, e.sqlstate)
+        print(e.get_notify_message())
 
     except Exception as e:
         # Các lỗi khác

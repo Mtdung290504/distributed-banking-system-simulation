@@ -16,4 +16,4 @@ local_registry.bind("auth", auth_service)
 # local_registry.bind("calc", calc_service)
 
 local_registry.listen(background=True)
-input("Press Enter to stop the server...")
+input("Press Enter to stop the server...\n")

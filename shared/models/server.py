@@ -14,6 +14,7 @@ class UserData(TypedDict):
     dob: date
     phone: str
     citizen_id: str
+    card_number: str
 
 
 class CardData(TypedDict):

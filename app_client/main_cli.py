@@ -58,6 +58,11 @@ while command := input("\nEnter command or press Enter to exit...: "):
             print(f)
     else:
         try:
-            user_service.message(command)
+            print(user_service.get_balance())
+            print(user_service.get_info())
+
+            history = user_service.get_transaction_history()
+            for record in history:
+                print(record["timestamp"], record)
         except Fault as f:
             print(f)

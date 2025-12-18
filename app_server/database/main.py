@@ -6,6 +6,7 @@ from threading import Lock
 from typing import List, Any, Optional, cast
 
 from shared.models.server import CardData, TransactionData, UserData
+from .exceptions import SQLException
 
 
 class Database:
@@ -78,177 +79,146 @@ class DatabaseReader:
 
     def get_all_users(self):
         """Lấy danh sách tất cả users"""
-        users = []
-        cursor = None
-
-        try:
-            cursor = self.database.get_connection().cursor(dictionary=True)
-            cursor.callproc("get_all_users")
-
-            for result in cursor.stored_results():
-                rows = result.fetchall()
-                users = [cast(UserData, row) for row in rows]
-
-            return users
-        finally:
-            if cursor:
-                cursor.close()
+        rows = self._query_procedure("get_all_users")
+        return [cast(UserData, row) for row in rows]
 
     def get_cards_by_user_id(self, user_id: int):
         """Lấy danh sách thẻ của một user"""
-        cards = []
-        cursor = None
-
-        try:
-            cursor = self.database.get_connection().cursor(dictionary=True)
-            cursor.callproc("get_cards_by_user_id", [user_id])
-
-            for result in cursor.stored_results():
-                rows = result.fetchall()
-                cards = [cast(CardData, row) for row in rows]
-
-            return cards
-        finally:
-            if cursor:
-                cursor.close()
+        rows = self._query_procedure("get_cards_by_user_id", [user_id])
+        return [cast(CardData, row) for row in rows]
 
     def login(self, card_number: str, card_pin: str):
         """Đăng nhập và lấy thông tin user"""
         cursor = None
-
         try:
             cursor = self.database.get_connection().cursor()
-
-            # Tham số OUT cần khởi tạo giá trị ban đầu
-            # args bao gồm: [IN_card, IN_pin, OUT_id, OUT_name, OUT_dob, OUT_phone, OUT_citizen]
             args = [card_number, card_pin, 0, "", None, "", ""]
 
             # callproc trả về một list các tham số đã được cập nhật giá trị
-            # Ta dùng cast(List[Any], ...) để IDE không báo lỗi khi truy cập index
             result_args = cast(List[Any], cursor.callproc("login", args))
 
             user_info: UserData = {
                 "id": result_args[2],
                 "name": result_args[3],
-                "dob": result_args[4],  # mysql-connector tự chuyển về datetime.date
+                "dob": result_args[4],
                 "phone": result_args[5],
                 "citizen_id": result_args[6],
+                "card_number": card_number,
             }
-
             return user_info
-
+        except mysql.connector.Error as e:
+            raise SQLException(str(e.msg), e.sqlstate)
         finally:
             if cursor:
                 cursor.close()
 
-    def check_balance(self, card_number: str) -> int:
+    def check_balance(self, card_number: str):
         """Kiểm tra số dư"""
-        cursor = None
+        rows = self._query_procedure("check_balance", [card_number])
+        if rows:
+            row = cast(CardData, rows[0])  # lấy row đầu tiên từ results
+            return int(row["balance"])
 
-        try:
-            cursor = self.database.get_connection().cursor(dictionary=True)
-            cursor.callproc("check_balance", [card_number])
-
-            for result in cursor.stored_results():
-                # fetchone có thể trả về None
-                row = cast(Optional[CardData], result.fetchone())
-                if row:
-                    return int(row["balance"])
-
-            raise Exception("Không tìm thấy số dư cho thẻ này.")
-        finally:
-            if cursor:
-                cursor.close()
+        raise Exception(f"Không tìm thấy số dư cho thẻ {card_number}")
 
     def get_transaction_history(self, card_number: str) -> List[TransactionData]:
         """Lấy lịch sử giao dịch"""
-        transactions = []
+        rows = self._query_procedure("get_transaction_history", [card_number])
+        return [cast(TransactionData, row) for row in rows]
+
+    def _query_procedure(
+        self, proc_name: str, params: list | None = None, dictionary: bool = True
+    ) -> List[Any]:
+        """Hàm helper để thực thi proc lấy dữ liệu và bắt lỗi tập trung"""
         cursor = None
-
+        results = []
         try:
-            cursor = self.database.get_connection().cursor(dictionary=True)
-            cursor.callproc("get_transaction_history", [card_number])
+            cursor = self.database.get_connection().cursor(dictionary=dictionary)
+            cursor.callproc(proc_name, params or [])
 
+            # gom tất cả rows từ stored_results
             for result in cursor.stored_results():
-                rows = cast(List[Any], result.fetchall())
-                transactions = [cast(TransactionData, row) for row in rows]
-
-            return transactions
+                results.extend(result.fetchall())
+            return results
+        except mysql.connector.Error as e:
+            raise SQLException(str(e.msg), e.sqlstate)
         finally:
             if cursor:
                 cursor.close()
 
 
 class DatabaseWriter:
-    """Xử lý các thao tác WRITE vào database"""
+    """Xử lý các thao tác WRITE vào database thông qua Stored Procedures"""
 
     def __init__(self, database: Database):
         self.database = database
         self._lock = Lock()
 
+    # Note: k dùng trong app chính
     def register_user(self, name: str, dob: str, phone: str, citizen_id: str):
-        with self._lock:
-            cursor = self.database.get_connection().cursor()
-            try:
-                cursor.callproc("register_user", [name, dob, phone, citizen_id])
-                self.database.get_connection().commit()
-            finally:
-                cursor.close()
+        """
+        Đăng ký người dùng mới.
+            *dob: Ngày sinh định dạng 'YYYY-MM-DD'.
 
+        Raises:
+            SQLException: Nếu số điện thoại hoặc CCCD đã tồn tại trong hệ thống.
+        """
+        self._exec_procedure("register_user", [name, dob, phone, citizen_id])
+
+    # Note: k dùng trong app chính
     def register_card(self, card_number: str, pin: str, balance: int, user_id: int):
-        with self._lock:
-            cursor = self.database.get_connection().cursor()
-            try:
-                cursor.callproc("register_card", [card_number, pin, balance, user_id])
-                self.database.get_connection().commit()
-            finally:
-                cursor.close()
+        """
+        Raises:
+            SQLException: Nếu số thẻ đã tồn tại hoặc User ID không hợp lệ.
+        """
+        self._exec_procedure("register_card", [card_number, pin, balance, user_id])
 
     def withdraw_money(self, card_number: str, amount: int, transaction_time: int):
-        with self._lock:
-            cursor = self.database.get_connection().cursor()
-            try:
-                cursor.callproc(
-                    "withdraw_money", [card_number, amount, transaction_time]
-                )
-                self.database.get_connection().commit()
-            finally:
-                cursor.close()
+        """
+        Raises:
+            SQLException: Nếu số dư không đủ để thực hiện giao dịch.
+        """
+        self._exec_procedure("withdraw_money", [card_number, amount, transaction_time])
 
     def transfer_money(
-        self,
-        from_card_number: str,
-        to_card_number: str,
-        amount: int,
-        transaction_time: int,
+        self, from_card: str, to_card: str, amount: int, transaction_time: int
     ):
-        with self._lock:
-            cursor = self.database.get_connection().cursor()
-            try:
-                cursor.callproc(
-                    "transfer_money",
-                    [from_card_number, to_card_number, amount, transaction_time],
-                )
-                self.database.get_connection().commit()
-            finally:
-                cursor.close()
+        """
+        Raises:
+            SQLException: Nếu số dư tài khoản gửi không đủ, tài khoản nhận không tồn tại, hoặc chuyển cho chính mình.
+        """
+        self._exec_procedure(
+            "transfer_money", [from_card, to_card, amount, transaction_time]
+        )
 
     def deposit_money(self, card_number: str, amount: int, transaction_time: int):
-        with self._lock:
-            cursor = self.database.get_connection().cursor()
-            try:
-                cursor.callproc(
-                    "deposit_money", [card_number, amount, transaction_time]
-                )
-                self.database.get_connection().commit()
-            finally:
-                cursor.close()
+        """
+        Raises:
+            SQLException: Nếu số thẻ không tồn tại.
+        """
+        self._exec_procedure("deposit_money", [card_number, amount, transaction_time])
 
     def change_pin(self, card_number: str, new_pin: str):
+        """
+        Raises:
+            SQLException: Nếu mã PIN mới trùng với mã PIN hiện tại.
+        """
+        self._exec_procedure("change_pin", [card_number, new_pin])
+
+    def _exec_procedure(self, proc_name: str, params: list):
+        """
+        Thực thi Stored Procedure và xử lý lỗi.
+
+        Raises:
+            SQLException: Nếu có lỗi nghiệp vụ từ SQL (45000) hoặc lỗi kết nối.
+        """
         with self._lock:
-            cursor = self.database.get_connection().cursor()
+            conn = self.database.get_connection()
+            cursor = conn.cursor()
             try:
-                cursor.callproc("change_pin", [card_number, new_pin])
-                self.database.get_connection().commit()
+                cursor.callproc(proc_name, params)
+                conn.commit()
+            except mysql.connector.Error as e:
+                raise SQLException(str(e.msg), e.sqlstate)
             finally:
                 cursor.close()

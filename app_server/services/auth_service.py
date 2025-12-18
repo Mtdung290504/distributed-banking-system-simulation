@@ -28,7 +28,12 @@ class AuthServiceImpl(RemoteObject, AuthService):
 
             while True:
                 session_id = str(uuid.uuid4())
-                user_service = UserServiceImpl(self.registry, session_id, user_data)
+                user_service = UserServiceImpl(
+                    session_id=session_id,
+                    user=user_data,
+                    database_reader=self.database.reader(),
+                    registry=self.registry,
+                )
 
                 # Đảm bảo session_id là duy nhất, chạy đến khi nào uuid không trùng thì thôi
                 # Nhưng xác suất trùng thấp hơn trúng số nữa

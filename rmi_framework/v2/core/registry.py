@@ -355,8 +355,8 @@ class LocalRegistry:
                 addr=(str(self.host), self.port),
                 allow_none=True,
                 logRequests=False,
-                bind_and_activate=True,
             )
+
             self._server.register_instance(self)
 
         self._is_running = True
@@ -472,7 +472,7 @@ class LocateRegistry:
             reg = LocalRegistry(port=port)
             LocateRegistry._current_local_registry = reg
         else:
-            print('Reuse registry')
+            print("Reuse registry")
 
         return LocateRegistry._current_local_registry
 

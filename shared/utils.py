@@ -4,9 +4,9 @@ from datetime import date, datetime
 
 def now() -> int:
     """
-    Trả về timestamp hiện tại theo ms
+    Trả về timestamp hiện tại theo s
     """
-    return int(time.time() * 1000)
+    return int(time.time())
 
 
 def dmy_from_date(date_obj: date) -> str:
