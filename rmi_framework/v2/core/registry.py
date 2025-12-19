@@ -213,10 +213,9 @@ class LocalRegistry:
         """
         self.host = host or get_local_inet_address()
         self.port = port or DEFAULT_RMI_PORT
+        self.lock = threading.RLock()
 
         self._services: dict[str, ServiceWrapper] = {}
-        self._lock = threading.RLock()
-
         self._server: Optional[SimpleXMLRPCServer] = None
         self._is_running = False
 
@@ -264,7 +263,7 @@ class LocalRegistry:
         """
         self._assert_valid_remote_object(remote_object)
 
-        with self._lock:
+        with self.lock:
             if name in self._services:
                 raise ValueError(
                     f"Service [{name}] đã được bind trong registry. "
@@ -275,6 +274,19 @@ class LocalRegistry:
             self._services[name] = ServiceWrapper(remote_object)
             remote_object.exported_name = name
             print(f"[Registry-{self.host}:{self.port}] Bound service: [{name}]")
+
+    def bound(self, name: str) -> bool:
+        """
+        Check xem service name có tồn tại không.
+
+        Args:
+            name: Service name
+
+        Returns:
+            bool: True nếu service đã được bind
+        """
+        with self.lock:
+            return name in self._services
 
     def rebind(self, name: str, remote_object: RemoteObject):
         """
@@ -291,7 +303,7 @@ class LocalRegistry:
 
         self._assert_valid_remote_object(remote_object)
 
-        with self._lock:
+        with self.lock:
             if name in self._services:
                 print(f"[Registry-{self.host}:{self.port}] Rebinding service: [{name}]")
             else:
@@ -314,7 +326,7 @@ class LocalRegistry:
             ValueError: Nếu service không tồn tại
         """
 
-        with self._lock:
+        with self.lock:
             if name not in self._services:
                 raise ValueError(f"Service [{name}] không tồn tại trong registry!")
 
@@ -330,7 +342,7 @@ class LocalRegistry:
         Returns:
             list: Danh sách service names
         """
-        with self._lock:
+        with self.lock:
             return list(self._services.keys())
 
     def listen(self, background: bool = False):
@@ -404,7 +416,7 @@ class LocalRegistry:
         method_name = parts[1]
 
         # Lookup service
-        with self._lock:
+        with self.lock:
             if service_name not in self._services:
                 raise AttributeError(
                     f"Service [{service_name}] không tồn tại trong registry"
@@ -432,12 +444,28 @@ class LocalRegistry:
             if isinstance(result, RemoteObject):
                 service_instance = result
 
-                # Format: ClassName#ObjectID
-                service_name_ref = (
-                    f"{service_instance.__class__.__name__}"
-                    f"{SERVICE_NAME_SPLITOR}"
-                    f"{service_instance.object_id}"
-                )
+                # Không dùng các hàm như bound hay bind vì ở trong
+                with self.lock:
+                    # Đã bind
+                    if service_instance.exported_name and self.bound(
+                        service_instance.exported_name
+                    ):
+                        service_name_ref = service_instance.exported_name
+
+                    # Chưa bind thì auto-bind
+                    else:
+                        service_name_ref = (
+                            f"{service_instance.__class__.__name__}"
+                            f"{SERVICE_NAME_SPLITOR}"
+                            f"{service_instance.object_id}"
+                        )
+
+                        # Bind nếu chưa tồn tại
+                        if not self.bound(service_name_ref):
+                            self.bind(service_name_ref, service_instance)
+                            print(f"[Auto-Export Return] Bound [{service_name_ref}]")
+                        else:
+                            print(f"Reuse Auto-Export Return: [{service_name_ref}]")
 
                 return service_instance.serialize(
                     service_name_ref, self.host, self.port
@@ -683,20 +711,25 @@ class RPCStub:
                         f"\tLưu ý: Có thể dùng obj.exported_name để dùng trong unbind."
                     )
 
-                # Format: ClassName#ObjectID
-                service_name = (
-                    f"{arg.__class__.__name__}"
-                    f"{SERVICE_NAME_SPLITOR}"
-                    f"{arg.object_id}"
-                )
+                with reg.lock:  # Fix thread-safety
+                    # Nếu đã export (bind) rồi
+                    if arg.exported_name and reg.bound(arg.exported_name):
+                        service_name = arg.exported_name
+                    else:
+                        # Auto export
+                        # Format: ClassName#ObjectID
+                        service_name = (
+                            f"{arg.__class__.__name__}"
+                            f"{SERVICE_NAME_SPLITOR}"
+                            f"{arg.object_id}"
+                        )
 
-                # AUTO-EXPORT: Tự động bind nếu chưa có
-                with reg._lock:  # Fix thread-safety
-                    if service_name not in reg._services:
-                        reg.bind(service_name, arg)
-                        # Lưu exported_name để dev có thể tự unbind
-                        arg.exported_name = service_name
-                        print(f"[Auto-Export] Bound [{service_name}] to registry")
+                        if not reg.bound(service_name):
+                            reg.bind(service_name, arg)
+                            print(f"[Auto-Export] Bound [{service_name}] to registry")
+                        else:
+                            # Nếu đã auto export lần trước rồi thì thôi
+                            print(f"[Serialize] Reusing auto-export [{service_name}]")
 
                 # Serialize thành remote reference
                 serialized.append(arg.serialize(service_name, reg.host, reg.port))
