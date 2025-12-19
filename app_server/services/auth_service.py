@@ -5,6 +5,7 @@ from shared.interfaces.client import SuccessCallback
 from shared.models.server import LoginResult
 
 from ..database.main import Database
+from ..command_queue import CommandQueue
 
 from .user_service import UserServiceImpl
 
@@ -13,10 +14,15 @@ from typing import Optional
 
 
 class AuthServiceImpl(RemoteObject, AuthService):
-    def __init__(self, registry: LocalRegistry, database: Database):
+    def __init__(
+        self, registry: LocalRegistry, database: Database, command_queue: CommandQueue
+    ):
         super().__init__()
-        self.database = database
+
         self.registry = registry
+        self.database = database
+        self.command_queue = command_queue
+
         self.user_id: Optional[int] = None
 
     def login(self, card_number: str, pin: str, callback: SuccessCallback):
@@ -31,8 +37,9 @@ class AuthServiceImpl(RemoteObject, AuthService):
                 user_service = UserServiceImpl(
                     session_id=session_id,
                     user=user_data,
-                    database_reader=self.database.reader(),
                     registry=self.registry,
+                    database_reader=self.database.reader(),
+                    command_queue=self.command_queue,
                 )
 
                 # Đảm bảo session_id là duy nhất, chạy đến khi nào uuid không trùng thì thôi

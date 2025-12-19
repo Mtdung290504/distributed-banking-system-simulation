@@ -64,5 +64,10 @@ while command := input("\nEnter command or press Enter to exit...: "):
             history = user_service.get_transaction_history()
             for record in history:
                 print(record["timestamp"], record)
+
+            user_service.change_pin("haha", success_callback)
+            user_service.deposit(1000, success_callback)
+            user_service.withdraw(2000, success_callback)
+            user_service.transfer("222222", 1000, success_callback)
         except Fault as f:
             print(f)
