@@ -16,7 +16,7 @@ from .coordinator import Coordinator
 current_conf = get_current_config()
 MY_PORT = current_conf["port"]
 
-database = Database("127.0.0.1", "root", "123456", f"atm_db_{PEER_ID}")
+database = Database("127.0.0.1", "root", "123456", f"atm_db_s{PEER_ID}")
 command_queue = CommandQueue()
 event_emitter = EventEmitter()
 command_executor = CommandExecutor(command_queue, database.writer())
