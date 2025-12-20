@@ -19,3 +19,4 @@ py -m app_server.main
 ## Notes:
 
 - Type check: python.analysis.typeCheckingMode
+- Nhớ đổi IP trong config

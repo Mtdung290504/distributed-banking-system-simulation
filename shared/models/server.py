@@ -1,4 +1,4 @@
-from typing import TypedDict, Literal, List, Union
+from typing import TypedDict, Literal, List, Union, NotRequired
 from datetime import date
 
 from shared.interfaces.client import SuccessCallback
@@ -41,7 +41,7 @@ class BaseCommand(TypedDict):
     peer_id: int
     card_number: str
     timestamp: int
-    success_callback: SuccessCallback
+    success_callback: NotRequired[SuccessCallback]
 
 
 class TransactionCommand(BaseCommand):

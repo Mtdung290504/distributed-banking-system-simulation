@@ -13,7 +13,7 @@ SERVER_CONFIG: Dict[int, ServerInfo] = {
 }
 
 # ID của server hiện tại (Sửa thành "2" khi chạy code server 2)
-PEER_ID = 1
+PEER_ID = 2
 
 
 def get_current_config() -> ServerInfo:
