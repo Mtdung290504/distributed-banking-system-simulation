@@ -5,7 +5,24 @@ from rmi_framework.v2 import Remote
 
 from .client import SuccessCallback
 
-from ..models.server import LoginResult, TransactionData, UserData
+from ..models.server import LoginResult, TransactionData, UserData, ATMCommand
+
+
+class PeerService(Remote):
+    @abstractmethod
+    def request_token(self) -> bool:
+        """Peer gọi hàm này để báo nó cần token"""
+        pass
+
+    @abstractmethod
+    def receive_sync(self, logs: List[ATMCommand], pass_token: bool) -> bool:
+        """Peer gọi hàm này để đẩy dữ liệu + Trao Token"""
+        pass
+
+    @abstractmethod
+    def get_token_status(self) -> bool:
+        """Trả về trạng thái giữ Token của peer."""
+        pass
 
 
 class AuthService(Remote):
