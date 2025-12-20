@@ -1,7 +1,7 @@
 from shared.models.server import ATMCommand
-
 from .database.main import DatabaseWriter, SQLException
 from .command_queue import CommandQueue
+from .config import PEER_ID
 
 
 class CommandExecutor:
@@ -9,11 +9,10 @@ class CommandExecutor:
         self.command_queue = command_queue
         self.database_writer = database_writer
 
-    def exec(self) -> list[ATMCommand]:
+    def exec_direct(self, commands: list[ATMCommand]) -> list[ATMCommand]:
         success: list[ATMCommand] = []
-        current = self.command_queue.get_all()
 
-        for cmd in current:
+        for cmd in commands:
             try:
                 # Note: python version > 3.10
                 match cmd["command_type"]:
@@ -21,17 +20,14 @@ class CommandExecutor:
                         self.database_writer.change_pin(
                             cmd["card_number"], cmd["new_pin"]
                         )
-
                     case "deposit":
                         self.database_writer.deposit_money(
                             cmd["card_number"], cmd["amount"], cmd["timestamp"]
                         )
-
                     case "withdraw":
                         self.database_writer.withdraw_money(
                             cmd["card_number"], cmd["amount"], cmd["timestamp"]
                         )
-
                     case "transfer":
                         self.database_writer.transfer_money(
                             cmd["card_number"],
@@ -42,10 +38,22 @@ class CommandExecutor:
 
                 success.append(cmd)
 
-                cmd["success_callback"].notify('\nGiao dịch thành công!')
+                # Chỉ gọi callback nếu lệnh này xuất phát từ Server này
+                if cmd["peer_id"] == PEER_ID:
+                    cmd["success_callback"].notify("\nGiao dịch thành công!")
+                else:
+                    # Lệnh của Peer -> Chỉ thực thi DB, không gọi callback (vì callback object là của client bên kia)
+                    pass
+
+            # Thường thì peer chỉ nhận được các command thực thi thành công
             except SQLException as e:
-                cmd["success_callback"].notify(e.get_notify_message())
+                if cmd["peer_id"] == PEER_ID:
+                    cmd["success_callback"].notify(e.get_notify_message())
             except Exception as e:
                 print(f"Unexpected error: {e}")
 
         return success
+
+    def exec(self) -> list[ATMCommand]:
+        current = self.command_queue.get_all()
+        return self.exec_direct(current)

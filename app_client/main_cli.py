@@ -3,7 +3,7 @@
 from xmlrpc.client import Fault
 from rmi_framework.v2 import LocateRegistry
 
-from shared.interfaces import server
+from shared.interfaces.server import AuthService, UserService
 from .callbacks import SuccessCallbackImpl
 
 
@@ -11,7 +11,7 @@ local_registry = LocateRegistry.local_registry()
 local_registry.listen(background=True)
 
 registry = LocateRegistry.get_registry(address=None, port=29054)
-auth_service = registry.lookup("auth", server.AuthService)
+auth_service = registry.lookup("auth", AuthService)
 
 # ping_callback = PingCallbackImpl()
 success_callback = SuccessCallbackImpl()
@@ -46,7 +46,7 @@ except KeyboardInterrupt:
 
 # Get user service
 assert session_id is not None
-user_service = registry.lookup(session_id, server.UserService)
+user_service = registry.lookup(session_id, UserService)
 
 # Lưu ý: Vì client chạy background thread, nếu main thread kết thúc, client sẽ tắt.
 # Cần block main thread lại nếu muốn giữ connection (ví dụ chờ input)
