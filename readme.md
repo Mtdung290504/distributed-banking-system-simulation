@@ -4,9 +4,9 @@
 
 ```bash
 # Chạy client:
-py -m app_client.main
+py -m app_client.main_cli
 # Chạy client 2:
-py -m z_app_client.main
+py -m z_app_client.main_cli
 ```
 
 ```bash
