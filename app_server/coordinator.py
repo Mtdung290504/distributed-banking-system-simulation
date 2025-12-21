@@ -118,6 +118,22 @@ class Coordinator:
         with self.lock:
             return self.has_token
 
+    def on_peer_alive(self):
+        """
+        Được gọi khi Peer vừa thăm dò mình.
+        Nghĩa là Peer đã sống lại -> Tranh thủ đẩy dữ liệu tồn đọng sang ngay.
+        """
+        # Kiểm tra nhanh xem có gì để gửi không
+        with self.lock:
+            has_pending = len(self.pending_sync_logs) > 0
+            has_token = self.has_token
+
+        # Chỉ gửi nếu mình đang giữ Token và có dữ liệu chưa gửi
+        if has_token and has_pending:
+            print(">> Peer is back, triggering immediate background sync...")
+            # Chạy trong thread riêng để không block hàm remote
+            threading.Thread(target=self._sync_data_only, daemon=True).start()
+
     def set_peer_demanding(self, status: bool):
         """Đánh dấu rằng peer kia đang cần token"""
         with self.lock:

@@ -118,6 +118,22 @@ class Coordinator:
         with self.lock:
             return self.has_token
 
+    def on_peer_alive(self):
+        """
+        Được gọi khi Peer vừa thăm dò mình.
+        Nghĩa là Peer đã sống lại -> Tranh thủ đẩy dữ liệu tồn đọng sang ngay.
+        """
+        # Kiểm tra nhanh xem có gì để gửi không
+        with self.lock:
+            has_pending = len(self.pending_sync_logs) > 0
+            has_token = self.has_token
+
+        # Chỉ gửi nếu mình đang giữ Token và có dữ liệu chưa gửi
+        if has_token and has_pending:
+            print(">> Peer is back, triggering immediate background sync...")
+            # Chạy trong thread riêng để không block hàm remote
+            threading.Thread(target=self._sync_data_only, daemon=True).start()
+
     def set_peer_demanding(self, status: bool):
         """Đánh dấu rằng peer kia đang cần token"""
         with self.lock:
@@ -244,7 +260,7 @@ class Coordinator:
             logs = self._sanitize_logs(self.pending_sync_logs)
             log_size = len(logs)
 
-        print(f">> [SYNC-ONLY] Pushing {log_size} logs to Peer (Keep Token)...")
+        print(f">> Pushing {log_size} logs to Peer (Keep Token)...")
 
         try:
             # pass_token = False
@@ -254,10 +270,10 @@ class Coordinator:
                 # Xóa logs đã gửi để tránh gửi trùng lần sau
                 self.pending_sync_logs = self.pending_sync_logs[log_size:]
 
-            print(">> [INFO] Background sync success.")
+            print("\tBackground sync success.")
 
         except (ConnectionRefusedError, OSError):
             # Không làm gì cả, giữ logs lại trong pending_sync_logs để lần sau gửi tiếp
-            print(">> [WARN] Peer unreachable for background sync. Retrying later.")
+            print("\t[Warning] Peer unreachable for background sync. Retrying later.")
         except Exception as e:
-            print(f">> [ERROR] Background sync failed: {e}")
+            print(f"\t[Error] Background sync failed: {e}")

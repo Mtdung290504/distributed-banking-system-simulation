@@ -33,4 +33,6 @@ class PeerServiceImpl(RemoteObject, PeerService):
         return True
 
     def get_token_status(self):
-        return self.coordinator.is_holding_token()
+        peer_hold_token = self.coordinator.is_holding_token()
+        self.coordinator.on_peer_alive()
+        return peer_hold_token
