@@ -178,7 +178,6 @@ class DatabaseWriter:
         Raises:
             SQLException: Nếu số dư không đủ để thực hiện giao dịch.
         """
-        print("withdraw")
         self._exec_procedure("withdraw_money", [card_number, amount, transaction_time])
 
     def transfer_money(

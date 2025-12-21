@@ -43,16 +43,59 @@ class Coordinator:
         self._initial_token_check()
         threading.Thread(target=self._worker_loop, daemon=True).start()
 
+    # def _initial_token_check(self):
+    #     if PEER_ID == 1:
+    #         with self.lock:
+    #             self.has_token = True
+    #         self.token_event.set()
+    #         print(">> [STARTUP] I am Server 1. Holding Token.")
+    #     else:
+    #         with self.lock:
+    #             self.has_token = False
+    #         print(f">> [STARTUP] I am Server {PEER_ID}. Waiting.")
     def _initial_token_check(self):
-        if PEER_ID == 1:
+        print(f">> Server [{PEER_ID}] started. Checking peer token status...")
+
+        try:
+            # Nếu Peer tắt -> Bị ConnectionRefusedError ngay lập tức, xử lý trong except
+            # Nếu Peer bật -> Trả về True/False
+            peer_has_token = self.peer_service_proxy.get_token_status()
+            print(f"\tPeer is ALIVE. Peer holding token: {peer_has_token}")
+
+            if peer_has_token:
+                # Peer đang giữ Token -> Mình nhịn
+                with self.lock:
+                    self.has_token = False
+                print("\tPeer holds the token, wait.")
+
+            else:
+                # Peer sống nhưng không giữ Token (Cả 2 cùng khởi động)
+                # Dùng ID để phân xử
+                if PEER_ID == 1:
+                    print("\tPeer ID:1 -> Seize token.")
+                    with self.lock:
+                        self.has_token = True
+                    self.token_event.set()
+                else:
+                    print("\tPeer ID:2 -> Wait token.")
+                    with self.lock:
+                        self.has_token = False
+
+        except (ConnectionRefusedError, OSError):
+            # Peer chết/chưa mở
+            # ConnectionRefusedError bắt được ngay lập tức
+            print("\tPeer unreachable (ConnectionRefused). Seize the Token.")
             with self.lock:
                 self.has_token = True
             self.token_event.set()
-            print(">> [STARTUP] I am Server 1. Holding Token.")
-        else:
+
+        except Exception as e:
+            # Các lỗi khác (như lỗi RPC Fault...)
+            # Trường hợp này gần như không bao giờ xảy ra, nhưng nếu có thì tự chiếm token
+            print(f"\tUnexpected error probing peer: {e}")
             with self.lock:
-                self.has_token = False
-            print(f">> [STARTUP] I am Server {PEER_ID}. Waiting.")
+                self.has_token = True
+            self.token_event.set()
 
     def _sanitize_logs(self, logs: List[ATMCommand]):
         """
