@@ -14,7 +14,7 @@ def run_client():
     local_registry.listen(background=True)
 
     # Thay đổi port nếu cần (kết nối tới Server 1 hoặc 2)
-    registry = LocateRegistry.get_registry(address=None, port=29054)
+    registry = LocateRegistry.get_registry(address="10.31.176.169", port=29055)
     auth_service = registry.lookup("auth", AuthService)
     success_callback = SuccessCallbackImpl()
 

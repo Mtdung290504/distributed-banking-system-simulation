@@ -40,7 +40,7 @@ class CommandExecutor:
 
                 # Chỉ gọi callback nếu lệnh này xuất phát từ Server này
                 if cmd["peer_id"] == PEER_ID and "success_callback" in cmd:
-                    cmd["success_callback"].notify("\nGiao dịch thành công!")
+                    cmd["success_callback"].notify("Giao dịch thành công!", "success")
                 else:
                     # Lệnh của Peer -> Chỉ thực thi DB, không gọi callback (vì callback object là của client bên kia)
                     pass
@@ -48,7 +48,7 @@ class CommandExecutor:
             # Thường thì peer chỉ nhận được các command thực thi thành công
             except SQLException as e:
                 if cmd["peer_id"] == PEER_ID and "success_callback" in cmd:
-                    cmd["success_callback"].notify(e.get_notify_message())
+                    cmd["success_callback"].notify(e.get_notify_message(), "error")
             except Exception as e:
                 print(f"Unexpected error: {e}")
 
