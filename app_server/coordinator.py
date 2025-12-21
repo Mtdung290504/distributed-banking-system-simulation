@@ -43,16 +43,6 @@ class Coordinator:
         self._initial_token_check()
         threading.Thread(target=self._worker_loop, daemon=True).start()
 
-    # def _initial_token_check(self):
-    #     if PEER_ID == 1:
-    #         with self.lock:
-    #             self.has_token = True
-    #         self.token_event.set()
-    #         print(">> [STARTUP] I am Server 1. Holding Token.")
-    #     else:
-    #         with self.lock:
-    #             self.has_token = False
-    #         print(f">> [STARTUP] I am Server {PEER_ID}. Waiting.")
     def _initial_token_check(self):
         print(f">> Server [{PEER_ID}] started. Checking peer token status...")
 
