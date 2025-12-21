@@ -18,6 +18,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QColor
 
+from typing import Callable
+
 # Bảng màu hiện đại
 COLOR_PRIMARY = "#007BFF"
 COLOR_PRIMARY_HOVER = "#0056B3"

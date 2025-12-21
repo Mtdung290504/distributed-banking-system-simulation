@@ -3,7 +3,7 @@ from shared.interfaces.client import PingCallback, SuccessCallback
 
 from shared.utils import now
 
-from typing import Literal
+from typing import Literal, Callable
 
 
 class PingCallbackImpl(RemoteObject, PingCallback):
@@ -14,9 +14,19 @@ class PingCallbackImpl(RemoteObject, PingCallback):
         return now() - timestamp
 
 
-class SuccessCallbackImpl(RemoteObject, SuccessCallback):
-    def __init__(self):
-        super().__init__()
+TypeLiteral = Literal["success", "error", "info"]
 
-    def notify(self, message: str, type: Literal["success", "error", "info"] = "info"):
-        return print("Server success message:", message)
+
+class SuccessCallbackImpl(RemoteObject, SuccessCallback):
+    def __init__(
+        self,
+        notify_handler: Callable[[str, TypeLiteral], None] | None = None,
+    ):
+        super().__init__()
+        self.notify_handler = notify_handler
+
+    def notify(self, message: str, type: TypeLiteral = "info"):
+        if self.notify_handler:
+            return self.notify_handler(message, type)
+
+        return print(f"[{type}] Server message:", message)

@@ -7,9 +7,13 @@ class ServerInfo(TypedDict):
 
 
 # Cấu hình cứng
+# SERVER_CONFIG: Dict[int, ServerInfo] = {
+#     1: {"host": "10.31.176.42", "port": 29054},
+#     2: {"host": "10.31.176.169", "port": 29055},
+# }
 SERVER_CONFIG: Dict[int, ServerInfo] = {
-    1: {"host": "10.31.176.42", "port": 29054},
-    2: {"host": "10.31.176.169", "port": 29055},
+    1: {"host": "192.168.1.48", "port": 29054},
+    2: {"host": "192.168.1.48", "port": 29055},
 }
 
 # ID của server hiện tại (Sửa thành "2" khi chạy code server 2)
